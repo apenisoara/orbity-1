@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Solar System</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+        #info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #data {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        #hint {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <div id="realTime"></div>
+        <div id="flowRate"></div>
+    </div>
+    <div id="data"></div>
+    <div id="hint">Press '+' to increase time flow, '-' to decrease time flow</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        const currentDate = new Date(); // Define currentDate
+        let time = 0; // Initialize time
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Orbit controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        camera.position.set(0, 5, 15);
+        camera.lookAt(0, 0, 0);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 1.5); // Soft white light
+        scene.add(ambientLight);
+
+        const pointLight = new THREE.PointLight(0xffffff, 1.5, 100);
+        pointLight.position.set(0, 0, 0);
+        scene.add(pointLight);
+        const sunGeometry = new THREE.SphereGeometry(1, 32, 32);
+        const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xfff5e1 }); // More realistic sun color
+        const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+        sun.userData = {
+            originalColor: 0xfff5e1, // Store original color for the sun
+            name: 'Sun',
+            description: 'The Sun is the star at the center of the Solar System. It is a nearly perfect sphere of hot plasma, and it provides the energy necessary for life on Earth.'
+        };
+        scene.add(sun);
+
+        // Starfield
+        // Starfield
+        const starGeometry = new THREE.BufferGeometry();
+        const starMaterial = new THREE.PointsMaterial({ color: 0xffffff });
+
+        const starVertices = [];
+        for (let i = 0; i < 5000; i++) {
+            const x = THREE.MathUtils.randFloatSpread(2000);
+            const y = THREE.MathUtils.randFloatSpread(2000);
+            const z = THREE.MathUtils.randFloatSpread(2000);
+            starVertices.push(x, y, z);
+        }
+
+        starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+        const stars = new THREE.Points(starGeometry, starMaterial);
+        scene.add(stars);
+        const prominentStars = [
+            { name: 'Sirius', position: [1000, 200, -500], description: 'Sirius is the brightest star in the night sky.' },
+            { name: 'Betelgeuse', position: [-1500, 300, 800], description: 'Betelgeuse is a red supergiant star in the constellation Orion.' },
+            { name: 'Rigel', position: [2000, -400, 1000], description: 'Rigel is a blue supergiant star in the constellation Orion.' }
+        ];
+
+        const starMeshes = prominentStars.map(star => {
+            const starGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+            const starMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const starMesh = new THREE.Mesh(starGeometry, starMaterial);
+            starMesh.position.set(...star.position);
+            starMesh.userData = { name: star.name, description: star.description };
+            scene.add(starMesh);
+            return starMesh;
+        });
+
+        const planetData = [
+            { size: 0.1, distance: 1.2, color: 0xaaaaaa, name: 'Mercury', inclination: 7.0, revolution: 88, weight: '3.30 x 10^23 kg', description: 'Smallest planet in the Solar System.' }, // Mercury
+            { size: 0.2, distance: 1.5, color: 0xffd700, name: 'Venus', inclination: 3.39, revolution: 225, weight: '4.87 x 10^24 kg', description: 'Hottest planet in the Solar System.' }, // Venus
+            { size: 0.2, distance: 2, color: 0x0000ff, name: 'Earth', inclination: 0.0, revolution: 365, weight: '5.97 x 10^24 kg', description: 'The only planet known to support life.' }, // Earth
+            { size: 0.15, distance: 2.5, color: 0xff4500, name: 'Mars', inclination: 1.85, revolution: 687, weight: '6.42 x 10^23 kg', description: 'Known as the Red Planet.' }, // Mars
+            { size: 0.3, distance: 3.5, color: 0xffa500, name: 'Jupiter', inclination: 1.3, revolution: 4333, weight: '1.90 x 10^27 kg', description: 'Largest planet in the Solar System.' }, // Jupiter
+            { size: 0.25, distance: 4.5, color: 0xd2b48c, name: 'Saturn', inclination: 2.49, revolution: 10759, weight: '5.68 x 10^26 kg', description: 'Famous for its rings.' }, // Saturn
+            { size: 0.2, distance: 5.5, color: 0x87ceeb, name: 'Uranus', inclination: 0.77, revolution: 30687, weight: '8.68 x 10^25 kg', description: 'Rotates on its side.' }, // Uranus
+            { size: 0.2, distance: 6.5, color: 0x4682b4, name: 'Neptune', inclination: 1.77, revolution: 60190, weight: '1.02 x 10^26 kg', description: 'Furthest planet from the Sun.' }, // Neptune
+            { size: 0.1, distance: 7.5, color: 0xdeb887, name: 'Pluto', inclination: 17.16, revolution: 90560, weight: '1.31 x 10^22 kg', description: 'Dwarf planet in the Kuiper belt.' }, // Pluto
+            { size: 0.1, distance: 8, color: 0x8b4513, name: 'Haumea', inclination: 28.2, revolution: 285, weight: '4.01 x 10^21 kg', description: 'Dwarf planet with a fast rotation.' }, // Haumea
+            { size: 0.1, distance: 8.5, color: 0x8a2be2, name: 'Makemake', inclination: 29.0, revolution: 309, weight: '3.10 x 10^21 kg', description: 'Dwarf planet in the Kuiper belt.' }, // Makemake
+            { size: 0.1, distance: 9, color: 0x5f9ea0, name: 'Eris', inclination: 44.0, revolution: 561, weight: '1.67 x 10^22 kg', description: 'One of the largest known dwarf planets.' }, // Eris
+        ];
+
+        const daysSinceEpoch = (currentDate - new Date(Date.UTC(2000, 0, 1))) / (1000 * 60 * 60 * 24);
+
+        const meanAnomalies = [174.796, 50.115, 358.617, 19.412, 20.020, 317.020, 142.238, 256.228, 14.53, 0, 0, 0]; // Mean anomalies for May 5, 2000
+        const orbitalPeriods = [87.969, 224.701, 365.256, 686.971, 4332.59, 10759.22, 30688.5, 60182, 90560, 285, 309, 561]; // in Earth days
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const dataElement = document.getElementById('data');
+
+        let selectedObject = null;
+
+        const planets = planetData.map((data, index) => {
+            const meanAnomaly = meanAnomalies[index];
+            const orbitalPeriod = orbitalPeriods[index];
+            const initialAngle = (meanAnomaly + (daysSinceEpoch / orbitalPeriod) * 360) * (Math.PI / 180);
+            const planetGeometry = new THREE.SphereGeometry(data.size, 32, 32);
+            const planetMaterial = new THREE.MeshStandardMaterial({ color: data.color, roughness: 0.7, metalness: 0.1 });
+            const planet = new THREE.Mesh(planetGeometry, planetMaterial);
+            planet.userData = { originalColor: data.color }; // Store original color
+            planet.position.x = data.distance * Math.cos(initialAngle);
+            planet.position.z = data.distance * Math.sin(initialAngle);
+            planet.position.y = data.distance * Math.sin(THREE.MathUtils.degToRad(data.inclination)) * Math.sin(initialAngle);
+            scene.add(planet);
+
+            // Add name label
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            context.font = '24px Arial';
+            context.fillStyle = 'white';
+            context.fillText(data.name, 0, 24);
+            const texture = new THREE.CanvasTexture(canvas);
+            const labelMaterial = new THREE.SpriteMaterial({ map: texture });
+            const label = new THREE.Sprite(labelMaterial);
+            label.scale.set(1, 0.5, 1);
+            label.position.set(planet.position.x, -0.5, planet.position.z);
+            scene.add(label);
+
+            // Orbit
+            const orbitGeometry = new THREE.RingGeometry(data.distance - 0.01, data.distance + 0.01, 64);
+            const orbitMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+            const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
+            orbit.userData = { type: 'orbit', planetData: data, originalColor: 0xffffff }; // Store original color for orbit
+            orbit.rotation.x = Math.PI / 2 - THREE.MathUtils.degToRad(data.inclination);
+            scene.add(orbit);
+            return { planet, distance: data.distance, label, orbit };
+        });
+
+        const moons = [];
+
+        let timeFlowRate = 1; // Control the speed of time flow
+
+        // Add event listeners for time control
+        window.addEventListener('keydown', (event) => {
+            if (event.key === '+') {
+                timeFlowRate *= 2; // Increase time flow rate
+            } else if (event.key === '-') {
+                timeFlowRate /= 2; // Decrease time flow rate
+            }
+        });
+
+        window.addEventListener('mousemove', (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(planets.flatMap(p => [p.planet, p.orbit]).concat([sun, ...starMeshes]));
+
+            if (intersects.length > 0) {
+                const planet = intersects[0].object;
+                const planetData = planets.find(p => p.planet === planet || p.orbit === planet) || moons.find(m => m.moon === planet) || { userData: planet.userData };
+                document.body.style.cursor = 'pointer';
+                dataElement.style.display = 'block';
+                if (selectedObject !== planet) {
+                    if (selectedObject && selectedObject.material) {
+                        selectedObject.material.color.setHex(selectedObject.userData.originalColor); // Restore original color
+                    }
+                    selectedObject = planet;
+                    if (planet.material) {
+                        planet.material.color.setHex(0xff0000); // Highlight effect
+                    }
+                }
+                if (planetData && planetData.orbit) { // For planets
+                    const { name, revolution, weight, description, size } = planetData.orbit.userData.planetData;
+                    dataElement.innerHTML = `
+                        <strong>${name}</strong><br>
+                        Revolution Time: ${revolution} days<br>
+                        Size: ${size} AU<br>
+                        Weight: ${weight}<br>
+                        Description: ${description}
+                    `;
+                } else if (planetData && planetData.moon) { // For moons
+                    const { name, description } = planetData.userData;
+                    dataElement.innerHTML = `
+                        <strong>${name}</strong><br>
+                        Description: ${description}
+                    `;
+                }
+            } else {
+                document.body.style.cursor = 'default';
+                dataElement.style.display = 'none';
+                if (selectedObject && selectedObject.material) {
+                    selectedObject.material.color.setHex(selectedObject.userData.originalColor); // Restore original color
+                }
+                selectedObject = null;
+            }
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.01 * timeFlowRate;
+            const realTimeElement = document.getElementById('realTime');
+            const flowRateElement = document.getElementById('flowRate');
+
+            const realTime = new Date(currentDate.getTime() + time * 24 * 60 * 60 * 1000);
+            realTimeElement.textContent = `Real Time: ${realTime.toUTCString()}`;
+            flowRateElement.textContent = `Time Flow Rate: ${timeFlowRate}x`;
+            planets.forEach(({ planet, distance, label }, index) => {
+                const angle = time * (index + 1) * 0.05; // Adjusted for better visibility
+                planet.position.x = distance * Math.cos(angle);
+                planet.position.z = distance * Math.sin(angle);
+                planet.position.y = distance * Math.sin(THREE.MathUtils.degToRad(planetData[index].inclination)) * Math.sin(angle);
+                planet.rotation.y += 0.01; // Spin the planet
+
+                // Update label position
+                label.position.set(planet.position.x, planet.position.y - 0.5, planet.position.z);
+            });
+
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
